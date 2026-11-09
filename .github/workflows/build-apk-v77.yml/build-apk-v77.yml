@@ -1,0 +1,56 @@
+name: Build Blue Big Fish V77 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'V77-part-00'
+      - 'V77-part-01'
+      - 'V77-part-02'
+      - 'V77-part-03'
+      - 'V77-part-04'
+      - '.github/workflows/build-apk-v77.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Reassemble V77 ZIP
+        run: |
+          cat V77-part-00 V77-part-01 V77-part-02 V77-part-03 V77-part-04 > V77.zip
+          unzip -tq V77.zip
+
+      - name: Extract Android project
+        run: |
+          unzip -q V77.zip -d source
+          test -f source/TapMaidWidget_Release/settings.gradle.kts
+
+      - name: Build debug APK
+        working-directory: source/TapMaidWidget_Release
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: blue-big-fish-v77-apk
+          path: source/TapMaidWidget_Release/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
